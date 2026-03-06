@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Watchlist Hub</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #121923;
+      --panel-2: #182231;
+      --text: #e8edf5;
+      --muted: #9fb0c5;
+      --accent: #4da3ff;
+      --accent-2: #67e8f9;
+      --border: #263345;
+      --green: #22c55e;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(180deg, #091019, #0b0f14 220px);
+      color: var(--text);
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .hero { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom: 20px; }
+    h1 { margin: 0 0 8px; font-size: 2rem; }
+    .sub { color: var(--muted); max-width: 760px; line-height: 1.45; }
+    .grid { display:grid; grid-template-columns: 1.2fr .8fr; gap: 20px; }
+    .panel {
+      background: rgba(18,25,35,.9);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.22);
+    }
+    .panel h2 { margin:0 0 12px; font-size: 1.1rem; }
+    .controls { display:grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+    label { display:block; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+    input, select, textarea, button {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 11px 12px;
+      font-size: .95rem;
+    }
+    textarea { min-height: 160px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    button {
+      cursor: pointer;
+      background: linear-gradient(180deg, #1c74d9, #1257a8);
+      border: none;
+      font-weight: 600;
+    }
+    button.secondary { background: #243246; border: 1px solid var(--border); }
+    button.warn { background: linear-gradient(180deg, #b45309, #92400e); }
+    button.success { background: linear-gradient(180deg, #16a34a, #15803d); }
+    .row { display:flex; gap: 10px; align-items:center; }
+    .row > * { flex: 1; }
+    .chips { display:flex; flex-wrap:wrap; gap:8px; }
+    .chip {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #10243b;
+      border: 1px solid #22446a;
+      color: #bdd8ff;
+      font-size: .82rem;
+    }
+    table { width:100%; border-collapse: collapse; }
+    th, td { text-align:left; padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,.06); vertical-align: top; }
+    th { color: var(--muted); font-size: .85rem; font-weight: 600; }
+    .title { font-weight: 700; }
+    .meta { color: var(--muted); font-size: .86rem; }
+    .service { text-transform: capitalize; }
+    .score {
+      display:inline-block;
+      min-width: 40px;
+      text-align:center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-weight: 700;
+      background: #233143;
+    }
+    .score.good { background: rgba(34,197,94,.18); color: #8df0af; }
+    .score.ok { background: rgba(245,158,11,.18); color: #ffd07d; }
+    .score.bad { background: rgba(239,68,68,.18); color: #ff9b9b; }
+    .status-badge {
+      display:inline-block;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+    .status-watchlist { background: rgba(77,163,255,.12); color: #b8d8ff; border-color: rgba(77,163,255,.28); }
+    .status-watching { background: rgba(34,197,94,.14); color: #9cf0ba; border-color: rgba(34,197,94,.28); }
+    .section-title { display:flex; align-items:center; justify-content:space-between; gap:12px; margin: 18px 0 8px; }
+    .section-title h3 { margin:0; font-size: 1rem; }
+    .count-pill { color: var(--muted); font-size: .82rem; }
+    .stats { display:grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
+    .stat { background: #101823; border:1px solid var(--border); border-radius: 14px; padding: 12px; }
+    .stat .n { font-size: 1.5rem; font-weight: 800; }
+    .stat .l { color: var(--muted); font-size: .85rem; }
+    .hint, .small { color: var(--muted); font-size: .86rem; line-height: 1.4; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+    .bookmarklet {
+      display:block; margin:8px 0 0; padding:10px 12px; border-radius:12px; background:#0f1722; border:1px dashed #436283; color:#d7e7ff;
+    }
+    .hidden { display:none; }
+    .footer { margin-top: 18px; color: var(--muted); font-size: .82rem; }
+    @media (max-width: 960px) {
+      .grid { grid-template-columns: 1fr; }
+      .controls, .stats { grid-template-columns: 1fr 1fr; }
+      .hero { flex-direction: column; }
+    }
+  </style>
+
+<style>
+</style>
+
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <h1>Watchlist Hub</h1>
+        <div class="sub">A no-server prototype that keeps everything in your browser. Import titles from Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+ using a bookmarklet, then keep them organized across Watchlist and Watching so you always know what is queued up and what is in progress.</div>
+      </div>
+      <div class="chips">
+        <div class="chip">Local only</div>
+        <div class="chip">No login</div>
+        <div class="chip">Chromebook-friendly</div>
+      </div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2>Your unified watchlist</h2>
+        <div class="controls">
+          <div>
+            <label for="search">Search</label>
+            <input id="search" placeholder="Title contains..." />
+          </div>
+          <div>
+            <label for="serviceFilter">Service</label>
+            <select id="serviceFilter">
+              <option value="all">All services</option>
+              <option value="netflix">Netflix</option>
+              <option value="hulu">Hulu</option>
+              <option value="prime">Prime Video</option>
+              <option value="paramountplus">Paramount+</option>
+              <option value="max">Max</option>
+              <option value="appletv">Apple TV+</option>
+            </select>
+          </div>
+          <div>
+            <label for="sortBy">Sort</label>
+            <select id="sortBy">
+              <option value="score-desc">Best score</option>
+              <option value="title-asc">Title A–Z</option>
+              <option value="service-asc">Service</option>
+              <option value="added-desc">Recently added</option>
+            </select>
+          </div>
+          <div>
+            <label for="statusFilter">Section</label>
+            <select id="statusFilter">
+              <option value="all">All sections</option>
+              <option value="watchlist">Watchlist</option>
+              <option value="watching">Watching</option>
+            </select>
+          </div>
+          <div>
+            <label for="minScore">Min score</label>
+            <select id="minScore">
+              <option value="0">Any</option>
+              <option value="60">60+</option>
+              <option value="70">70+</option>
+              <option value="80">80+</option>
+              <option value="90">90+</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" style="margin-bottom:10px;">
+          <button class="secondary" id="seedDemo">Load demo titles</button>
+          <button class="secondary" id="exportBtn">Export JSON</button>
+          <button class="warn" id="clearBtn">Clear all</button>
+        </div>
+        <div style="overflow:auto; max-height: 720px;">
+          <div class="section-title">
+            <h3>Watching</h3>
+            <div class="count-pill" id="watchingCount"></div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Service</th>
+                <th>Score</th>
+                <th>Source</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="watchingBody"></tbody>
+          </table>
+
+          <div class="section-title">
+            <h3>Watchlist</h3>
+            <div class="count-pill" id="watchlistCount"></div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Service</th>
+                <th>Score</th>
+                <th>Source</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="watchlistBody"></tbody>
+          </table>
+        </div></div>
+      </div>
+
+      <div class="panel">
+        <h2>Import tools</h2>
+        <div class="hint">Fastest path: host this file somewhere simple, like GitHub Pages or Netlify, then drag the generated bookmarklet to your bookmarks bar. For immediate testing, you can also paste titles manually below. The bookmarklet now targets Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+ watchlist pages.</div>
+
+        <div style="margin-top:14px;">
+          <label for="hubUrl">Hub URL</label>
+          <input id="hubUrl" placeholder="https://yourname.github.io/watchlist-hub/watchlist_hub.html" />
+          <div class="small">The bookmarklet needs the public URL of this page so it can open it and hand off imported titles from Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+.</div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <button id="makeBookmarklet" class="success">Generate bookmarklet</button>
+          <a id="bookmarkletLink" class="bookmarklet hidden" href="#">Import to Watchlist Hub</a>
+          <div class="small">After you generate it, drag the link to your bookmarks bar.</div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label for="manualService">Manual import service</label>
+          <select id="manualService">
+            <option value="netflix">Netflix</option>
+            <option value="hulu">Hulu</option>
+            <option value="prime">Prime Video</option>
+            <option value="paramountplus">Paramount+</option>
+            <option value="max">Max</option>
+            <option value="appletv">Apple TV+</option>
+          </select>
+        </div>
+        <div style="margin-top:10px;">
+          <label for="manualTitles">Manual import titles (one per line)</label>
+          <textarea id="manualTitles" placeholder="The Diplomat\nReservation Dogs\nOnly Murders in the Building"></textarea>
+          <div class="row" style="margin-top:10px;">
+            <button id="manualImport">Import lines</button>
+            <button class="secondary" id="pasteSample">Paste sample list</button>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label for="jsonBox">Paste exported/import JSON</label>
+          <textarea id="jsonBox" placeholder='[{"title":"Shogun","service":"hulu","status":"watching"}]'></textarea>
+          <div class="row" style="margin-top:10px;">
+            <button id="jsonImport">Import JSON</button>
+            <button class="secondary" id="copyData">Copy current data</button>
+          </div>
+        </div>
+
+        <div class="footer">Notes: this prototype stores data in your browser using <span class="mono">localStorage</span>. Ratings are placeholder scores for now. New items start in Watchlist; move them into Watching as needed. Bookmarklet support now includes Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+. A future version could add TMDb/OMDb lookups.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'watchlist_hub_items_v3';
+
+    function loadItems() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+      catch { return []; }
+    }
+    function saveItems(items) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+    function normalizeTitle(s) {
+      return (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+    function heuristicScore(title) {
+      let hash = 0;
+      for (let i = 0; i < title.length; i++) hash = ((hash << 5) - hash) + title.charCodeAt(i);
+      const base = Math.abs(hash % 41) + 55; // 55..95 stable per title
+      return Math.max(1, Math.min(99, base));
+    }
+    function upsertItems(rawItems) {
+      const items = loadItems();
+      const map = new Map(items.map(it => [`${it.service}:${it.titleNorm}`, it]));
+      let added = 0;
+      for (const raw of rawItems) {
+        const title = (raw.title || '').replace(/\s+/g, ' ').trim();
+        const service = (raw.service || '').trim().toLowerCase();
+        if (!title || !service) continue;
+        const titleNorm = normalizeTitle(title);
+        const key = `${service}:${titleNorm}`;
+        if (map.has(key)) continue;
+        const item = {
+          id: crypto.randomUUID(),
+          title,
+          titleNorm,
+          service,
+          sourceUrl: raw.sourceUrl || '',
+          addedAt: new Date().toISOString(),
+          score: raw.score || heuristicScore(title),
+          status: raw.status === 'watching' ? 'watching' : 'watchlist',
+        };
+        items.push(item);
+        map.set(key, item);
+        added++;
+      }
+      saveItems(items);
+      render();
+      return added;
+    }
+    function removeItem(id) {
+      const items = loadItems().filter(it => it.id !== id);
+      saveItems(items);
+      render();
+    }
+    function clearAll() {
+      localStorage.removeItem(STORAGE_KEY);
+      render();
+    }
+    function scoreClass(score) {
+      if (score >= 80) return 'good';
+      if (score >= 70) return 'ok';
+      return 'bad';
+    }
+    function itemStatus(item) {
+      return item.status === 'watching' ? 'watching' : 'watchlist';
+    }
+    function statusBadge(status) {
+      const s = status === 'watching' ? 'watching' : 'watchlist';
+      return `<span class="status-badge status-${s}">${s === 'watching' ? 'Watching' : 'Watchlist'}</span>`;
+    }
+    function setStatus(id, status) {
+      const items = loadItems();
+      const item = items.find(it => it.id === id);
+      if (!item) return;
+      item.status = status === 'watching' ? 'watching' : 'watchlist';
+      saveItems(items);
+      render();
+    }
+    function renderStats(items) {
+      const stats = document.getElementById('stats');
+      const total = items.length;
+      const watchlist = items.filter(i => itemStatus(i) === 'watchlist').length;
+      const watching = items.filter(i => itemStatus(i) === 'watching').length;
+      const services = ['netflix','hulu','prime','paramountplus','max','appletv'];
+      const activeServices = services.filter(s => items.some(i => i.service === s)).length;
+      const avg = total ? Math.round(items.reduce((a,b) => a + (b.score || 0), 0) / total) : 0;
+      stats.innerHTML = `
+        <div class="stat"><div class="n">${total}</div><div class="l">Total titles</div></div>
+        <div class="stat"><div class="n">${watchlist}</div><div class="l">Watchlist</div></div>
+        <div class="stat"><div class="n">${watching}</div><div class="l">Watching</div></div>
+        <div class="stat"><div class="n">${activeServices || '—'}</div><div class="l">Active services</div></div>
+        <div class="stat"><div class="n">${avg || '—'}</div><div class="l">Avg score</div></div>
+      `;
+    }
+    function render() {
+      const allItems = loadItems();
+      let items = [...allItems];
+      const q = document.getElementById('search').value.trim().toLowerCase();
+      const service = document.getElementById('serviceFilter').value;
+      const status = document.getElementById('statusFilter').value;
+      const minScore = Number(document.getElementById('minScore').value || 0);
+      const sortBy = document.getElementById('sortBy').value;
+
+      if (q) items = items.filter(i => i.title.toLowerCase().includes(q));
+      if (service !== 'all') items = items.filter(i => i.service === service);
+      if (status !== 'all') items = items.filter(i => itemStatus(i) === status);
+      if (minScore) items = items.filter(i => (i.score || 0) >= minScore);
+
+      items.sort((a,b) => {
+        switch (sortBy) {
+          case 'title-asc': return a.title.localeCompare(b.title);
+          case 'service-asc': return a.service.localeCompare(b.service) || a.title.localeCompare(b.title);
+          case 'added-desc': return (b.addedAt || '').localeCompare(a.addedAt || '');
+          case 'score-desc':
+          default: return (b.score || 0) - (a.score || 0) || a.title.localeCompare(b.title);
+        }
+      });
+
+      renderStats(allItems);
+
+      const watchlistItems = items.filter(i => itemStatus(i) === 'watchlist');
+      const watchingItems = items.filter(i => itemStatus(i) === 'watching');
+
+      document.getElementById('watchlistCount').textContent = `${watchlistItems.length} shown`;
+      document.getElementById('watchingCount').textContent = `${watchingItems.length} shown`;
+
+      const renderRows = (rows, bodyId, emptyText) => {
+        const tbody = document.getElementById(bodyId);
+        if (!rows.length) {
+          tbody.innerHTML = `<tr><td colspan="5" class="meta">${emptyText}</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = rows.map(it => `
+          <tr>
+            <td>
+              <div class="title">${escapeHtml(it.title)}</div>
+              <div class="meta">${statusBadge(itemStatus(it))} &nbsp; Added ${new Date(it.addedAt).toLocaleString()}</div>
+            </td>
+            <td class="service">${escapeHtml(it.service)}</td>
+            <td><span class="score ${scoreClass(it.score)}">${it.score}</span></td>
+            <td>${it.sourceUrl ? `<a href="${escapeAttr(it.sourceUrl)}" target="_blank" rel="noreferrer">source</a>` : '<span class="meta">—</span>'}</td>
+            <td>
+              ${itemStatus(it) === 'watchlist'
+                ? `<button class="success" onclick="setStatus('${it.id}','watching')">Move to Watching</button>`
+                : `<button class="secondary" onclick="setStatus('${it.id}','watchlist')">Back to Watchlist</button>`
+              }
+              <div style="height:8px"></div>
+              <button class="secondary" onclick="removeItem('${it.id}')">Delete</button>
+            </td>
+          </tr>
+        `).join('');
+      };
+
+      renderRows(watchlistItems, 'watchlistBody', 'No watchlist titles match your filters.');
+      renderRows(watchingItems, 'watchingBody', 'No in-progress titles yet.');
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function escapeAttr(s) { return escapeHtml(s); }
+
+    function buildBookmarklet(hubUrl) {
+      const safeUrl = hubUrl.replace(/'/g, "\\'");
+      const js = `(function(){
+        function norm(s){return(s||'').replace(/\s+/g,' ').trim()}
+        function uniq(arr){const seen=new Set();return arr.filter(v=>{const k=(v||'').toLowerCase();if(!k||seen.has(k))return false;seen.add(k);return true})}
+        function detect(){const h=location.hostname,p=location.pathname;if(/netflix\.com$/.test(h))return 'netflix';if(/hulu\.com$/.test(h))return 'hulu';if(/amazon\.com$/.test(h)&&/\/gp\/video\/mystuff\/watchlist/.test(p))return 'prime';if(/paramountplus\.com$/.test(h))return 'paramountplus';if(/(play\.)?hbomax\.com$/.test(h)||/max\.com$/.test(h))return 'max';if(/tv\.apple\.com$/.test(h))return 'appletv';return null}
+        function filterTitles(values,maxLen){const bad=/^(netflix|hulu|prime video|amazon|paramount\+?|max|hbo max|apple tv\+?|play|more info|details|episodes|episode|trailer|resume|continue watching|add to my list|remove from my list|add to watchlist|remove from watchlist|next|previous|volume|subtitles|audio|settings|powered by|onetrust|home|search|movies|tv shows)$/i;return uniq(values.map(norm).filter(t=>t&&t.length>=2&&t.length<=(maxLen||120)&&!bad.test(t)&&!/^[0-9]+$/.test(t)))}
+        function extractBy(service,config){const vals=[];(config.attrSelectors||[]).forEach(pair=>document.querySelectorAll(pair[0]).forEach(el=>vals.push(el.getAttribute(pair[1])||'')));(config.textSelectors||[]).forEach(sel=>document.querySelectorAll(sel).forEach(el=>vals.push(el.innerText||el.textContent||'')));const titles=filterTitles(vals,config.maxLen||120);return titles.map(t=>({title:t,service:service,sourceUrl:location.href}))}
+        const configs={
+          netflix:{attrSelectors:[["[aria-label]","aria-label"],["img[alt]","alt"]],textSelectors:[],maxLen:80},
+          hulu:{attrSelectors:[["img[alt]","alt"],["[aria-label]","aria-label"]],textSelectors:["[data-testid*='title']"],maxLen:120},
+          prime:{attrSelectors:[["img[alt]","alt"],["[aria-label]","aria-label"]],textSelectors:["[data-testid*='title']","[class*='title']","[class*='Title']"],maxLen:120},
+          paramountplus:{attrSelectors:[["img[alt]","alt"],["[aria-label]","aria-label"]],textSelectors:["[data-testid*='title']","[class*='title']","[class*='Title']"],maxLen:120},
+          max:{attrSelectors:[["img[alt]","alt"],["[aria-label]","aria-label"]],textSelectors:["[data-testid*='title']","[class*='title']","[class*='Title']"],maxLen:120},
+          appletv:{attrSelectors:[["img[alt]","alt"],["[aria-label]","aria-label"]],textSelectors:["[data-testid*='title']","[class*='title']","[class*='Title']"],maxLen:140}
+        };
+        const service=detect();
+        if(!service){alert('This bookmarklet does not recognize this service page yet.');return}
+        const items=extractBy(service,configs[service]);
+        if(!items.length){alert('No titles found. Scroll to load more items and try again.');return}
+        const url='__HUBURL__';
+        const payload=encodeURIComponent(JSON.stringify({items,importedAt:new Date().toISOString()}));
+        window.open(url+(url.includes('?')?'&':'?')+'import='+payload,'_blank');
+      })();`;
+      return 'javascript:' + js.replace('__HUBURL__', safeUrl);
+    }
+    function handleImportFromQuery() {
+      const params = new URLSearchParams(location.search);
+      const raw = params.get('import');
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        const added = upsertItems(parsed.items || []);
+        alert(`Imported ${added} new title${added === 1 ? '' : 's'}.`);
+        history.replaceState({}, '', location.pathname);
+      } catch (e) {
+        alert('Import payload could not be read.');
+      }
+    }
+
+    document.getElementById('makeBookmarklet').addEventListener('click', () => {
+      const hubUrl = document.getElementById('hubUrl').value.trim();
+      if (!hubUrl) { alert('Enter the public URL where this page is hosted.'); return; }
+      const a = document.getElementById('bookmarkletLink');
+      a.href = buildBookmarklet(hubUrl);
+      a.classList.remove('hidden');
+      a.textContent = 'Import to Watchlist Hub';
+    });
+
+    document.getElementById('manualImport').addEventListener('click', () => {
+      const service = document.getElementById('manualService').value;
+      const lines = document.getElementById('manualTitles').value.split('\n').map(s => s.trim()).filter(Boolean);
+      const added = upsertItems(lines.map(title => ({ title, service })));
+      alert(`Imported ${added} new title${added === 1 ? '' : 's'}.`);
+    });
+
+    document.getElementById('pasteSample').addEventListener('click', () => {
+      document.getElementById('manualTitles').value = 'Shōgun\nThe Bear\nOnly Murders in the Building\nReservation Dogs';
+      document.getElementById('manualService').value = 'hulu';
+    });
+
+    document.getElementById('jsonImport').addEventListener('click', () => {
+      try {
+        const data = JSON.parse(document.getElementById('jsonBox').value);
+        const items = Array.isArray(data) ? data : (data.items || []);
+        const added = upsertItems(items);
+        alert(`Imported ${added} new title${added === 1 ? '' : 's'}.`);
+      } catch (e) {
+        alert('That is not valid JSON.');
+      }
+    });
+
+    document.getElementById('copyData').addEventListener('click', async () => {
+      const text = JSON.stringify(loadItems(), null, 2);
+      await navigator.clipboard.writeText(text);
+      alert('Current data copied to clipboard.');
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(loadItems(), null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'watchlist-hub-export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      if (confirm('Delete all stored titles from this browser?')) clearAll();
+    });
+
+    document.getElementById('seedDemo').addEventListener('click', () => {
+      const demo = [
+        { title: 'The Diplomat', service: 'netflix', sourceUrl: 'https://www.netflix.com/browse/my-list' },
+        { title: 'Blue Eye Samurai', service: 'netflix', sourceUrl: 'https://www.netflix.com/browse/my-list' },
+        { title: 'Shōgun', service: 'hulu', sourceUrl: 'https://www.hulu.com/my-stuff' },
+        { title: 'The Bear', service: 'hulu', sourceUrl: 'https://www.hulu.com/my-stuff', status: 'watching' },
+        { title: 'Reacher', service: 'prime', sourceUrl: 'https://www.amazon.com/gp/video/mystuff/watchlist' },
+        { title: 'Star Trek: Strange New Worlds', service: 'paramountplus', sourceUrl: 'https://www.paramountplus.com/my-list/' },
+        { title: 'The White Lotus', service: 'max', sourceUrl: 'https://play.hbomax.com/my-stuff' },
+        { title: 'Severance', service: 'appletv', sourceUrl: 'https://tv.apple.com/us/collection/watchlist/' }
+      ];
+      const added = upsertItems(demo);
+      alert(`Added ${added} demo title${added === 1 ? '' : 's'}.`);
+    });
+
+    ['search','serviceFilter','statusFilter','sortBy','minScore'].forEach(id => {
+      document.getElementById(id).addEventListener('input', render);
+      document.getElementById(id).addEventListener('change', render);
+    });
+
+    handleImportFromQuery();
+    render();
+  </script>
+</body>
+</html>
