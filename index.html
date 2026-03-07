@@ -465,21 +465,66 @@
     function escapeAttr(s) { return escapeHtml(s); }
 
     function buildBookmarklet(hubUrl) {
-      const safeUrl = hubUrl.replace(/'/g, "\\'");
+      const safeUrl = JSON.stringify(hubUrl);
       const js = `(function(){
-        function norm(s){return(s||'').replace(/\s+/g,' ').trim()}
-        function uniq(arr){const seen=new Set();return arr.filter(v=>{const k=(v||'').toLowerCase();if(!k||seen.has(k))return false;seen.add(k);return true})}
-        function detect(){const h=location.hostname,p=location.pathname;if(/netflix\.com$/.test(h))return 'netflix';if(/hulu\.com$/.test(h))return 'hulu';if(/amazon\.com$/.test(h)&&/\/gp\/video\/mystuff\/watchlist/.test(p))return 'prime';if(/paramountplus\.com$/.test(h))return 'paramountplus';if(/(play\.)?hbomax\.com$/.test(h)||/max\.com$/.test(h))return 'max';if(/tv\.apple\.com$/.test(h))return 'appletv';return null}
-        function filterTitles(values,maxLen){const bad=/^(netflix|hulu|prime video|amazon|paramount\+?|max|hbo max|apple tv\+?|play|more info|details|episodes|episode|trailer|resume|continue watching|add to my list|remove from my list|add to watchlist|remove from watchlist|next|previous|volume|subtitles|audio|settings|powered by|onetrust|home|search|movies|tv shows)$/i;return uniq(values.map(norm).filter(t=>t&&t.length>=2&&t.length<=(maxLen||120)&&!bad.test(t)&&!/^[0-9]+$/.test(t)))}
-        function extractBy(service,config){const vals=[];(config.attrSelectors||[]).forEach(pair=>document.querySelectorAll(pair[0]).forEach(el=>vals.push(el.getAttribute(pair[1])||'')));(config.textSelectors||[]).forEach(sel=>document.querySelectorAll(sel).forEach(el=>vals.push(el.innerText||el.textContent||'')));const titles=filterTitles(vals,config.maxLen||120);return titles.map(t=>({title:t,service:service,sourceUrl:location.href}))}
-        const configs={
-          netflix:{attrSelectors:[["[aria-label]","aria-label"],["img[alt]","alt"]],textSelectors:[],maxLen:80},
-          hulu:{attrSelectors:[["img[alt]","alt"],["[aria-label]","aria-label"]],textSelectors:["[data-testid*='title']"],maxLen:120},
-          prime:{attrSelectors:[["img[alt]","alt"],["[aria-label]","aria-label"]],textSelectors:["[data-testid*='title']","[class*='title']","[class*='Title']"],maxLen:120},
-          paramountplus:{attrSelectors:[["img[alt]","alt"],["[aria-label]","aria-label"]],textSelectors:["[data-testid*='title']","[class*='title']","[class*='Title']"],maxLen:120},
-          max:{attrSelectors:[["img[alt]","alt"],["[aria-label]","aria-label"]],textSelectors:["[data-testid*='title']","[class*='title']","[class*='Title']"],maxLen:120},
-          appletv:{attrSelectors:[["img[alt]","alt"],["[aria-label]","aria-label"]],textSelectors:["[data-testid*='title']","[class*='title']","[class*='Title']"],maxLen:140}
+        function norm(s){ return (s || '').replace(/\s+/g, ' ').trim(); }
+        function uniq(arr){
+          const seen = new Set();
+          return arr.filter(v => {
+            const k = (v || '').toLowerCase();
+            if (!k || seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          });
+        }
+        function detect(){
+          const h = location.hostname.toLowerCase();
+          const p = location.pathname.toLowerCase();
+          if (h.endsWith('netflix.com')) return 'netflix';
+          if (h.endsWith('hulu.com')) return 'hulu';
+          if (h.includes('amazon.') && p.includes('/gp/video/mystuff/watchlist')) return 'prime';
+          if (h.endsWith('paramountplus.com')) return 'paramountplus';
+          if (h.endsWith('hbomax.com') || h.endsWith('max.com') || h.endsWith('play.hbomax.com')) return 'max';
+          if (h.endsWith('tv.apple.com')) return 'appletv';
+          return null;
+        }
+        function filterTitles(values, maxLen){
+          const bad = /^(netflix|hulu|prime video|amazon|paramount\+?|max|hbo max|apple tv\+?|play|more info|details|episodes|episode|trailer|resume|continue watching|add to my list|remove from my list|add to watchlist|remove from watchlist|next|previous|volume|subtitles|audio|settings|powered by|onetrust|home|search|movies|tv shows)$/i;
+          return uniq(
+            values
+              .map(norm)
+              .filter(t => t && t.length >= 2 && t.length <= (maxLen || 120) && !bad.test(t) && !/^[0-9]+$/.test(t))
+          );
+        }
+        function extractBy(service, config){
+          const vals = [];
+          (config.attrSelectors || []).forEach(pair => {
+            document.querySelectorAll(pair[0]).forEach(el => vals.push((el.getAttribute(pair[1]) || '')));
+          });
+          (config.textSelectors || []).forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => vals.push((el.innerText || el.textContent || '')));
+          });
+          const titles = filterTitles(vals, config.maxLen || 120);
+          return titles.map(t => ({ title: t, service: service, sourceUrl: location.href }));
+        }
+        const configs = {
+          netflix: { attrSelectors: [['[aria-label]','aria-label'], ['img[alt]','alt']], textSelectors: [], maxLen: 80 },
+          hulu: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: [\"[data-testid*='title']\"], maxLen: 120 },
+          prime: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: [\"[data-testid*='title']\", \"[class*='title']\", \"[class*='Title']\"], maxLen: 120 },
+          paramountplus: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: [\"[data-testid*='title']\", \"[class*='title']\", \"[class*='Title']\"], maxLen: 120 },
+          max: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: [\"[data-testid*='title']\", \"[class*='title']\", \"[class*='Title']\"], maxLen: 120 },
+          appletv: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: [\"[data-testid*='title']\", \"[class*='title']\", \"[class*='Title']\"], maxLen: 140 }
         };
+        const service = detect();
+        if (!service) { alert('This bookmarklet does not recognize this service page yet.'); return; }
+        const items = extractBy(service, configs[service]);
+        if (!items.length) { alert('No titles found. Scroll to load more items and try again.'); return; }
+        const url = ${safeUrl};
+        const payload = encodeURIComponent(JSON.stringify({ items, importedAt: new Date().toISOString() }));
+        location.href = url + (url.includes('?') ? '&' : '?') + 'import=' + payload;
+      })();`;
+      return 'javascript:' + js;
+    };
         const service=detect();
         if(!service){alert('This bookmarklet does not recognize this service page yet.');return}
         const items=extractBy(service,configs[service]);
