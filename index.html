@@ -127,7 +127,7 @@
   <div class="wrap">
     <div class="hero">
       <div>
-        <h1>Watchlist Hub <span id="versionBadge" style="font-size:.55em; vertical-align:middle; padding:4px 10px; border:1px solid #263345; border-radius:999px; color:#9fb0c5; background:#182231;">v10</span></h1>
+        <h1>Watchlist Hub <span id="versionBadge" style="font-size:.55em; vertical-align:middle; padding:4px 10px; border:1px solid #263345; border-radius:999px; color:#9fb0c5; background:#182231;">v11</span></h1>
         <div class="sub">A no-server prototype that keeps everything in your browser. Import titles from Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+ using a bookmarklet, then keep them organized across Watchlist and Watching so you always know what is queued up and what is in progress.</div>
       </div>
       <div class="chips">
@@ -243,7 +243,7 @@
 
         <div style="margin-top:12px;">
           <button id="makeBookmarklet" class="success">Generate bookmarklet</button>
-          <a id="bookmarkletLink" class="bookmarklet hidden" href="#">Import to Watchlist Hub</a>
+          <a id="bookmarkletLink" class="bookmarklet hidden" href="#">Import to Hub</a>
           <div class="small">Dragging may fail on Chromebook. You can also copy the generated code below and paste it into a bookmark URL.</div>
         </div>
         <div style="margin-top:12px;">
@@ -252,7 +252,15 @@
           <div class="row" style="margin-top:10px;">
             <button id="copyBookmarklet" class="secondary">Copy bookmarklet code</button>
           </div>
-          <div class="small">This version hands titles to the hub without stuffing them into the URL, so large Hulu or Netflix lists are much less likely to fail.</div>
+          <div class="small">This version supports a clipboard-based BM flow for large service lists.</div>
+        </div>
+        <div style="margin-top:14px; border-top:1px solid #263345; padding-top:14px;">
+          <label for="pasteImportBox">Paste import</label>
+          <textarea id="pasteImportBox" style="min-height:110px;" placeholder="After running the BM on Hulu, Netflix, etc., paste the copied import payload here."></textarea>
+          <div class="row" style="margin-top:10px;">
+            <button id="importPasted" class="success">Import pasted data</button>
+          </div>
+          <div class="small">Recommended flow: run the BM on the streaming site, let it copy data, then come back here and paste/import.</div>
         </div>
 
         <div style="margin-top:16px;">
@@ -284,7 +292,7 @@
           </div>
         </div>
 
-        <div class="footer">Notes: this prototype stores data in your browser using <span class="mono">localStorage</span>. Ratings are placeholder scores for now. New items start in Watchlist; move them into Watching as needed. Use the Nicole checkmark to tag titles that are for Nicole. Bookmarklet support now includes Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+. A future version could add TMDb/OMDb lookups. Current build: <span class="mono">v10</span>.</div>
+        <div class="footer">Notes: this prototype stores data in your browser using <span class="mono">localStorage</span>. Ratings are placeholder scores for now. New items start in Watchlist; move them into Watching as needed. Use the Nicole checkmark to tag titles that are for Nicole. Bookmarklet support now includes Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+. A future version could add TMDb/OMDb lookups. Current build: <span class="mono">v11</span>.</div>
       </div>
     </div>
   </div>
@@ -466,7 +474,7 @@
 
     function buildBookmarklet(hubUrl) {
       const safeUrl = JSON.stringify(hubUrl);
-      const js = `(function(){
+      const js = `(async function(){
         function norm(s){ return (s || '').replace(/\s+/g, ' ').trim(); }
         function uniq(arr){
           const seen = new Set();
@@ -556,11 +564,26 @@
           appletv: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: ["[data-testid*='title']", "[class*='title']", "[class*='Title']"], maxLen: 140 }
         };
         const service = detect();
-        if (!service) { alert('This bookmarklet does not recognize this service page yet.'); return; }
+        if (!service) { alert('This BM does not recognize this service page yet.'); return; }
         const items = extractBy(service, configs[service]);
         if (!items.length) { alert('No titles found. Scroll to load more items and try again.'); return; }
-        window.name = 'WLH_IMPORT:' + JSON.stringify({ items, importedAt: new Date().toISOString() });
-        location.href = ${safeUrl};
+
+        const payload = JSON.stringify({ items, importedAt: new Date().toISOString() });
+        let copied = false;
+        try {
+          await navigator.clipboard.writeText(payload);
+          copied = true;
+        } catch (e) {
+          copied = false;
+        }
+
+        const url = ${safeUrl};
+        if (copied) {
+          alert('Copied ' + items.length + ' titles. Next: open Watchlist Hub and use Import pasted data.');
+          location.href = url;
+        } else {
+          prompt('Clipboard copy failed. Copy this import payload, then open Watchlist Hub and paste it there.', payload);
+        }
       })();`;
       return 'javascript:' + js;
     }
@@ -590,16 +613,7 @@
         alert('Import payload could not be read.');
       }
     }
-
-    function handleImportFromWindowName() {
-      const raw = window.name || '';
-      if (!raw.startsWith('WLH_IMPORT:')) return;
-      try {
-        const parsed = JSON.parse(raw.slice('WLH_IMPORT:'.length));
-        const added = upsertItems(parsed.items || []);
-        window.name = '';
-        alert(`Imported ${added} new title${added === 1 ? '' : 's'}.`);
-      } catch (e) {
+ catch (e) {
         window.name = '';
         alert('Import handoff could not be read.');
       }
@@ -612,7 +626,7 @@
       const code = buildBookmarklet(hubUrl);
       a.href = code;
       a.classList.remove('hidden');
-      a.textContent = 'Import to Watchlist Hub';
+      a.textContent = 'Import to Hub';
       const box = document.getElementById('bookmarkletCode');
       if (box) box.value = code;
     });
@@ -625,6 +639,21 @@
         alert('Bookmarklet code copied.');
       } catch (e) {
         alert('Copy failed. Select the code and copy it manually.');
+      }
+    });
+
+    document.getElementById('importPasted').addEventListener('click', () => {
+      const box = document.getElementById('pasteImportBox');
+      const raw = (box.value || '').trim();
+      if (!raw) { alert('Paste the copied import payload first.'); return; }
+      try {
+        const parsed = JSON.parse(raw);
+        const added = upsertItems(parsed.items || []);
+        render();
+        alert(`Imported ${added} new title${added === 1 ? '' : 's'}.`);
+        box.value = '';
+      } catch (e) {
+        alert('That pasted data is not valid import JSON.');
       }
     });
 
