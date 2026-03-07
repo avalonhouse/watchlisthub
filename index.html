@@ -467,7 +467,7 @@
     function buildBookmarklet(hubUrl) {
       const safeUrl = JSON.stringify(hubUrl);
       const js = `(function(){
-        function norm(s){ return (s || '').replace(/\s+/g, ' ').trim(); }
+        function norm(s){ return (s || '').replace(/\\s+/g, ' ').trim(); }
         function uniq(arr){
           const seen = new Set();
           return arr.filter(v => {
@@ -509,11 +509,11 @@
         }
         const configs = {
           netflix: { attrSelectors: [['[aria-label]','aria-label'], ['img[alt]','alt']], textSelectors: [], maxLen: 80 },
-          hulu: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: [\"[data-testid*='title']\"], maxLen: 120 },
-          prime: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: [\"[data-testid*='title']\", \"[class*='title']\", \"[class*='Title']\"], maxLen: 120 },
-          paramountplus: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: [\"[data-testid*='title']\", \"[class*='title']\", \"[class*='Title']\"], maxLen: 120 },
-          max: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: [\"[data-testid*='title']\", \"[class*='title']\", \"[class*='Title']\"], maxLen: 120 },
-          appletv: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: [\"[data-testid*='title']\", \"[class*='title']\", \"[class*='Title']\"], maxLen: 140 }
+          hulu: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: ["[data-testid*='title']"], maxLen: 120 },
+          prime: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: ["[data-testid*='title']", "[class*='title']", "[class*='Title']"], maxLen: 120 },
+          paramountplus: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: ["[data-testid*='title']", "[class*='title']", "[class*='Title']"], maxLen: 120 },
+          max: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: ["[data-testid*='title']", "[class*='title']", "[class*='Title']"], maxLen: 120 },
+          appletv: { attrSelectors: [['img[alt]','alt'], ['[aria-label]','aria-label']], textSelectors: ["[data-testid*='title']", "[class*='title']", "[class*='Title']"], maxLen: 140 }
         };
         const service = detect();
         if (!service) { alert('This bookmarklet does not recognize this service page yet.'); return; }
@@ -524,16 +524,6 @@
         location.href = url + (url.includes('?') ? '&' : '?') + 'import=' + payload;
       })();`;
       return 'javascript:' + js;
-    };
-        const service=detect();
-        if(!service){alert('This bookmarklet does not recognize this service page yet.');return}
-        const items=extractBy(service,configs[service]);
-        if(!items.length){alert('No titles found. Scroll to load more items and try again.');return}
-        const url='__HUBURL__';
-        const payload=encodeURIComponent(JSON.stringify({items,importedAt:new Date().toISOString()}));
-        location.href=url+(url.includes('?')?'&':'?')+'import='+payload;
-      })();`;
-      return 'javascript:' + js.replace('__HUBURL__', safeUrl);
     }
 
     function initializeHubUrl() {
