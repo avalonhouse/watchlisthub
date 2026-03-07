@@ -127,7 +127,7 @@
   <div class="wrap">
     <div class="hero">
       <div>
-        <h1>Watchlist Hub <span id="versionBadge" style="font-size:.55em; vertical-align:middle; padding:4px 10px; border:1px solid #263345; border-radius:999px; color:#9fb0c5; background:#182231;">v11</span></h1>
+        <h1>Watchlist Hub <span id="versionBadge" style="font-size:.55em; vertical-align:middle; padding:4px 10px; border:1px solid #263345; border-radius:999px; color:#9fb0c5; background:#182231;">v11.1</span></h1>
         <div class="sub">A no-server prototype that keeps everything in your browser. Import titles from Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+ using a bookmarklet, then keep them organized across Watchlist and Watching so you always know what is queued up and what is in progress.</div>
       </div>
       <div class="chips">
@@ -292,7 +292,7 @@
           </div>
         </div>
 
-        <div class="footer">Notes: this prototype stores data in your browser using <span class="mono">localStorage</span>. Ratings are placeholder scores for now. New items start in Watchlist; move them into Watching as needed. Use the Nicole checkmark to tag titles that are for Nicole. Bookmarklet support now includes Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+. A future version could add TMDb/OMDb lookups. Current build: <span class="mono">v11</span>.</div>
+        <div class="footer">Notes: this prototype stores data in your browser using <span class="mono">localStorage</span>. Ratings are placeholder scores for now. New items start in Watchlist; move them into Watching as needed. Use the Nicole checkmark to tag titles that are for Nicole. Bookmarklet support now includes Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+. A future version could add TMDb/OMDb lookups. Current build: <span class="mono">v11.1</span>.</div>
       </div>
     </div>
   </div>
@@ -613,12 +613,6 @@
         alert('Import payload could not be read.');
       }
     }
- catch (e) {
-        window.name = '';
-        alert('Import handoff could not be read.');
-      }
-    }
-
     document.getElementById('makeBookmarklet').addEventListener('click', () => {
       const hubUrl = document.getElementById('hubUrl').value.trim();
       if (!hubUrl) { alert('Enter the public URL where this page is hosted.'); return; }
