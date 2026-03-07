@@ -244,7 +244,15 @@
         <div style="margin-top:12px;">
           <button id="makeBookmarklet" class="success">Generate bookmarklet</button>
           <a id="bookmarkletLink" class="bookmarklet hidden" href="#">Import to Watchlist Hub</a>
-          <div class="small">After you generate it, drag the link to your bookmarks bar.</div>
+          <div class="small">Dragging may fail on Chromebook. You can also copy the generated code below and paste it into a bookmark URL.</div>
+        </div>
+        <div style="margin-top:12px;">
+          <label for="bookmarkletCode">Bookmarklet code</label>
+          <textarea id="bookmarkletCode" style="min-height:88px;" placeholder="Click Generate bookmarklet, then copy this code into a bookmark URL field."></textarea>
+          <div class="row" style="margin-top:10px;">
+            <button id="copyBookmarklet" class="secondary">Copy bookmarklet code</button>
+          </div>
+          <div class="small">This version redirects the current tab to your hub with the imported titles, which is more reliable on streaming sites.</div>
         </div>
 
         <div style="margin-top:16px;">
@@ -478,7 +486,7 @@
         if(!items.length){alert('No titles found. Scroll to load more items and try again.');return}
         const url='__HUBURL__';
         const payload=encodeURIComponent(JSON.stringify({items,importedAt:new Date().toISOString()}));
-        window.open(url+(url.includes('?')?'&':'?')+'import='+payload,'_blank');
+        location.href=url+(url.includes('?')?'&':'?')+'import='+payload;
       })();`;
       return 'javascript:' + js.replace('__HUBURL__', safeUrl);
     }
@@ -513,9 +521,23 @@
       const hubUrl = document.getElementById('hubUrl').value.trim();
       if (!hubUrl) { alert('Enter the public URL where this page is hosted.'); return; }
       const a = document.getElementById('bookmarkletLink');
-      a.href = buildBookmarklet(hubUrl);
+      const code = buildBookmarklet(hubUrl);
+      a.href = code;
       a.classList.remove('hidden');
       a.textContent = 'Import to Watchlist Hub';
+      const box = document.getElementById('bookmarkletCode');
+      if (box) box.value = code;
+    });
+
+    document.getElementById('copyBookmarklet').addEventListener('click', async () => {
+      const box = document.getElementById('bookmarkletCode');
+      if (!box || !box.value.trim()) { alert('Generate the bookmarklet first.'); return; }
+      try {
+        await navigator.clipboard.writeText(box.value);
+        alert('Bookmarklet code copied.');
+      } catch (e) {
+        alert('Copy failed. Select the code and copy it manually.');
+      }
     });
 
     document.getElementById('manualImport').addEventListener('click', () => {
