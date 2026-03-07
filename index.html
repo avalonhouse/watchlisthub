@@ -204,6 +204,7 @@
                 <th>Service</th>
                 <th>Score</th>
                 <th>Source</th>
+                <th>Nicole</th>
                 <th></th>
               </tr>
             </thead>
@@ -221,6 +222,7 @@
                 <th>Service</th>
                 <th>Score</th>
                 <th>Source</th>
+                <th>Nicole</th>
                 <th></th>
               </tr>
             </thead>
@@ -235,8 +237,8 @@
 
         <div style="margin-top:14px;">
           <label for="hubUrl">Hub URL</label>
-          <input id="hubUrl" placeholder="https://yourname.github.io/watchlist-hub/watchlist_hub.html" />
-          <div class="small">The bookmarklet needs the public URL of this page so it can open it and hand off imported titles from Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+.</div>
+          <input id="hubUrl" placeholder="https://avalonhouse.github.io/watchlisthub/" />
+          <div class="small">The bookmarklet needs the public URL of this page so it can open it and hand off imported titles. It will auto-fill from the current page when possible.</div>
         </div>
 
         <div style="margin-top:12px;">
@@ -274,7 +276,7 @@
           </div>
         </div>
 
-        <div class="footer">Notes: this prototype stores data in your browser using <span class="mono">localStorage</span>. Ratings are placeholder scores for now. New items start in Watchlist; move them into Watching as needed. Bookmarklet support now includes Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+. A future version could add TMDb/OMDb lookups.</div>
+        <div class="footer">Notes: this prototype stores data in your browser using <span class="mono">localStorage</span>. Ratings are placeholder scores for now. New items start in Watchlist; move them into Watching as needed. Use the Nicole checkmark to tag titles that are for Nicole. Bookmarklet support now includes Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+. A future version could add TMDb/OMDb lookups.</div>
       </div>
     </div>
   </div>
@@ -283,7 +285,12 @@
     const STORAGE_KEY = 'watchlist_hub_items_v3';
 
     function loadItems() {
-      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').map(item => ({
+          nicole: false,
+          ...item
+        }));
+      }
       catch { return []; }
     }
     function saveItems(items) {
@@ -318,6 +325,7 @@
           addedAt: new Date().toISOString(),
           score: raw.score || heuristicScore(title),
           status: raw.status === 'watching' ? 'watching' : 'watchlist',
+          nicole: !!raw.nicole,
         };
         items.push(item);
         map.set(key, item);
@@ -353,6 +361,14 @@
       const item = items.find(it => it.id === id);
       if (!item) return;
       item.status = status === 'watching' ? 'watching' : 'watchlist';
+      saveItems(items);
+      render();
+    }
+    function toggleNicole(id) {
+      const items = loadItems();
+      const item = items.find(it => it.id === id);
+      if (!item) return;
+      item.nicole = !item.nicole;
       saveItems(items);
       render();
     }
@@ -407,18 +423,19 @@
       const renderRows = (rows, bodyId, emptyText) => {
         const tbody = document.getElementById(bodyId);
         if (!rows.length) {
-          tbody.innerHTML = `<tr><td colspan="5" class="meta">${emptyText}</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" class="meta">${emptyText}</td></tr>`;
           return;
         }
         tbody.innerHTML = rows.map(it => `
           <tr>
             <td>
-              <div class="title">${escapeHtml(it.title)}</div>
+              <div class="title">${escapeHtml(it.title)}${it.nicole ? '<span class="nicole-badge">Nicole</span>' : ''}</div>
               <div class="meta">${statusBadge(itemStatus(it))} &nbsp; Added ${new Date(it.addedAt).toLocaleString()}</div>
             </td>
             <td class="service">${escapeHtml(it.service)}</td>
             <td><span class="score ${scoreClass(it.score)}">${it.score}</span></td>
             <td>${it.sourceUrl ? `<a href="${escapeAttr(it.sourceUrl)}" target="_blank" rel="noreferrer">source</a>` : '<span class="meta">—</span>'}</td>
+            <td><button class="secondary mini-btn" onclick="toggleNicole('${it.id}')">${it.nicole ? '✓' : '○'}</button></td>
             <td>
               ${itemStatus(it) === 'watchlist'
                 ? `<button class="success" onclick="setStatus('${it.id}','watching')">Move to Watching</button>`
@@ -465,6 +482,19 @@
       })();`;
       return 'javascript:' + js.replace('__HUBURL__', safeUrl);
     }
+
+    function initializeHubUrl() {
+      const input = document.getElementById('hubUrl');
+      if (!input) return;
+      const fallback = 'https://avalonhouse.github.io/watchlisthub/';
+      const here = location.href.split('?')[0].split('#')[0];
+      if (/^https?:\/\//i.test(here)) {
+        input.value = here;
+      } else {
+        input.value = fallback;
+      }
+    }
+
     function handleImportFromQuery() {
       const params = new URLSearchParams(location.search);
       const raw = params.get('import');
@@ -540,7 +570,7 @@
         { title: 'Reacher', service: 'prime', sourceUrl: 'https://www.amazon.com/gp/video/mystuff/watchlist' },
         { title: 'Star Trek: Strange New Worlds', service: 'paramountplus', sourceUrl: 'https://www.paramountplus.com/my-list/' },
         { title: 'The White Lotus', service: 'max', sourceUrl: 'https://play.hbomax.com/my-stuff' },
-        { title: 'Severance', service: 'appletv', sourceUrl: 'https://tv.apple.com/us/collection/watchlist/' }
+        { title: 'Severance', service: 'appletv', sourceUrl: 'https://tv.apple.com/us/collection/watchlist/', nicole: true }
       ];
       const added = upsertItems(demo);
       alert(`Added ${added} demo title${added === 1 ? '' : 's'}.`);
@@ -551,6 +581,7 @@
       document.getElementById(id).addEventListener('change', render);
     });
 
+    initializeHubUrl();
     handleImportFromQuery();
     render();
   </script>
