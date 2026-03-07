@@ -127,7 +127,7 @@
   <div class="wrap">
     <div class="hero">
       <div>
-        <h1>Watchlist Hub <span id="versionBadge" style="font-size:.55em; vertical-align:middle; padding:4px 10px; border:1px solid #263345; border-radius:999px; color:#9fb0c5; background:#182231;">v8</span></h1>
+        <h1>Watchlist Hub <span id="versionBadge" style="font-size:.55em; vertical-align:middle; padding:4px 10px; border:1px solid #263345; border-radius:999px; color:#9fb0c5; background:#182231;">v10</span></h1>
         <div class="sub">A no-server prototype that keeps everything in your browser. Import titles from Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+ using a bookmarklet, then keep them organized across Watchlist and Watching so you always know what is queued up and what is in progress.</div>
       </div>
       <div class="chips">
@@ -252,7 +252,7 @@
           <div class="row" style="margin-top:10px;">
             <button id="copyBookmarklet" class="secondary">Copy bookmarklet code</button>
           </div>
-          <div class="small">This version redirects the current tab to your hub with the imported titles, which is more reliable on streaming sites.</div>
+          <div class="small">This version hands titles to the hub without stuffing them into the URL, so large Hulu or Netflix lists are much less likely to fail.</div>
         </div>
 
         <div style="margin-top:16px;">
@@ -284,7 +284,7 @@
           </div>
         </div>
 
-        <div class="footer">Notes: this prototype stores data in your browser using <span class="mono">localStorage</span>. Ratings are placeholder scores for now. New items start in Watchlist; move them into Watching as needed. Use the Nicole checkmark to tag titles that are for Nicole. Bookmarklet support now includes Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+. A future version could add TMDb/OMDb lookups. Current build: <span class="mono">v8</span>.</div>
+        <div class="footer">Notes: this prototype stores data in your browser using <span class="mono">localStorage</span>. Ratings are placeholder scores for now. New items start in Watchlist; move them into Watching as needed. Use the Nicole checkmark to tag titles that are for Nicole. Bookmarklet support now includes Netflix, Hulu, Prime Video, Paramount+, Max, and Apple TV+. A future version could add TMDb/OMDb lookups. Current build: <span class="mono">v10</span>.</div>
       </div>
     </div>
   </div>
@@ -467,7 +467,7 @@
     function buildBookmarklet(hubUrl) {
       const safeUrl = JSON.stringify(hubUrl);
       const js = `(function(){
-        function norm(s){ return (s || '').replace(/\\s+/g, ' ').trim(); }
+        function norm(s){ return (s || '').replace(/\s+/g, ' ').trim(); }
         function uniq(arr){
           const seen = new Set();
           return arr.filter(v => {
@@ -488,13 +488,53 @@
           if (h.endsWith('tv.apple.com')) return 'appletv';
           return null;
         }
-        function filterTitles(values, maxLen){
-          const bad = /^(netflix|hulu|prime video|amazon|paramount\+?|max|hbo max|apple tv\+?|play|more info|details|episodes|episode|trailer|resume|continue watching|add to my list|remove from my list|add to watchlist|remove from watchlist|next|previous|volume|subtitles|audio|settings|powered by|onetrust|home|search|movies|tv shows)$/i;
-          return uniq(
-            values
-              .map(norm)
-              .filter(t => t && t.length >= 2 && t.length <= (maxLen || 120) && !bad.test(t) && !/^[0-9]+$/.test(t))
-          );
+        function cleanTitle(t, service){
+          t = norm(t)
+            .replace(/^Cover art for\s+/i, '')
+            .replace(/^Remove\s+/i, '')
+            .replace(/\s+from My Stuff$/i, '')
+            .replace(/\s+from Watchlist$/i, '')
+            .replace(/\.$/, '')
+            .trim();
+          if (service === 'hulu') {
+            t = t
+              .replace(/^\d+% progressed$/i, '')
+              .replace(/^Switch profile to .+$/i, '')
+              .replace(/^Hulu (Facebook|X|YouTube|Instagram)$/i, '')
+              .replace(/^Powered by OneTrust.*$/i, '')
+              .replace(/^Preference center$/i, '')
+              .replace(/^Notice of Right to Opt Out.*$/i, '')
+              .replace(/^Cookie list search$/i, '')
+              .replace(/^Account Menu$/i, '')
+              .replace(/^Company Logo$/i, '')
+              .replace(/^Video Player$/i, '')
+              .replace(/^Timeline$/i, '')
+              .replace(/^REWIND \d+ SEC$/i, '')
+              .replace(/^FORWARD \d+ SEC$/i, '')
+              .replace(/^START OVER$/i, '')
+              .replace(/^MUTE$/i, '')
+              .replace(/^CHROMECAST$/i, '')
+              .replace(/^FULL SCREEN$/i, '')
+              .replace(/^MINIMIZE$/i, '')
+              .replace(/^Back$/i, '')
+              .replace(/^quality$/i, '')
+              .replace(/^Filter$/i, '')
+              .replace(/^TV$/i, '')
+              .replace(/^Sports$/i, '')
+              .replace(/^Expiring$/i, '')
+              .replace(/^My Stuff$/i, '');
+          }
+          return norm(t);
+        }
+        function isBadTitle(t){
+          return /^(netflix|hulu|prime video|amazon|paramount\+?|max|hbo max|apple tv\+?|play|more info|details|episodes|episode|trailer|resume|continue watching|add to my list|remove from my list|add to watchlist|remove from watchlist|next|previous|volume|subtitles|audio|settings|powered by|onetrust|home|search|movies|tv shows|company logo|video player|timeline|back|filter|my stuff|tv|sports|expiring|quality|full screen|minimize|mute|start over|chromecast)$/i.test(t)
+            || /^[0-9]+$/.test(t)
+            || /^\d+% progressed$/i.test(t)
+            || /^switch profile to /i.test(t)
+            || /^remove .+ from my stuff$/i.test(t)
+            || /^cover art for /i.test(t)
+            || t.length < 2
+            || t.length > 140;
         }
         function extractBy(service, config){
           const vals = [];
@@ -504,7 +544,7 @@
           (config.textSelectors || []).forEach(sel => {
             document.querySelectorAll(sel).forEach(el => vals.push((el.innerText || el.textContent || '')));
           });
-          const titles = filterTitles(vals, config.maxLen || 120);
+          const titles = uniq(vals.map(v => cleanTitle(v, service)).filter(t => t && !isBadTitle(t)));
           return titles.map(t => ({ title: t, service: service, sourceUrl: location.href }));
         }
         const configs = {
@@ -519,9 +559,8 @@
         if (!service) { alert('This bookmarklet does not recognize this service page yet.'); return; }
         const items = extractBy(service, configs[service]);
         if (!items.length) { alert('No titles found. Scroll to load more items and try again.'); return; }
-        const url = ${safeUrl};
-        const payload = encodeURIComponent(JSON.stringify({ items, importedAt: new Date().toISOString() }));
-        location.href = url + (url.includes('?') ? '&' : '?') + 'import=' + payload;
+        window.name = 'WLH_IMPORT:' + JSON.stringify({ items, importedAt: new Date().toISOString() });
+        location.href = ${safeUrl};
       })();`;
       return 'javascript:' + js;
     }
@@ -549,6 +588,20 @@
         history.replaceState({}, '', location.pathname);
       } catch (e) {
         alert('Import payload could not be read.');
+      }
+    }
+
+    function handleImportFromWindowName() {
+      const raw = window.name || '';
+      if (!raw.startsWith('WLH_IMPORT:')) return;
+      try {
+        const parsed = JSON.parse(raw.slice('WLH_IMPORT:'.length));
+        const added = upsertItems(parsed.items || []);
+        window.name = '';
+        alert(`Imported ${added} new title${added === 1 ? '' : 's'}.`);
+      } catch (e) {
+        window.name = '';
+        alert('Import handoff could not be read.');
       }
     }
 
